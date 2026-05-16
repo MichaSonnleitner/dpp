@@ -240,7 +240,7 @@ with open(sys.argv[1], "r", encoding="utf-8") as f:
 alle_tokens = []
 for zeile in zeilen:
 	zeile = zeile.strip()
-	if zeile:
+	if zeile and not zeile.startswith("//"):  # ignoriere leere Zeilen und Kommentare
 		alle_tokens += lexer(zeile)
 # ── Parser + Codegen aufrufen ────────────────────
 ast = parser(alle_tokens)
