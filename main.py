@@ -44,6 +44,10 @@ class MathOperation:
 # ── Keywords Listen ──────────────────────────────
 keywords = ["text", "zahl", "dz", "zeige", "wenn", "nicht", "und", "dann", "ende", "gleich", "wie", "var", "für", "von", "bis"]
 type_keywords = ["text", "zahl", "dz", "var"]
+# ── Error Handling Funktion ─────────────────────────────
+def fehler(nachricht):
+    print(f"D++ Fehler: {nachricht}")
+    sys.exit(1)
 # ── Lexer Funktion ───────────────────────────────
 def lexer(zeile):
 	teile = zeile.split()
@@ -89,12 +93,16 @@ def lexer(zeile):
 			tokens.append(Token("NAME", wort))
 	return tokens
 # ── Parser Funktion ──────────────────────────────
-def parser(token_liste):
+def parser(token_liste, definierte_vars=None):
+	if definierte_vars is None:
+		definierte_vars = set()
 	knoten = []
 	i = 0
 	while i < len(token_liste):
 		token = token_liste[i]
 		if token.typ == "KEYWORD" and token.wert in type_keywords:
+			if i + 3 >= len(token_liste):
+				fehler(f"Fehlender Wert nach '=' bei Variable '{token_liste[i+1].wert}'")
 			var_name = token_liste[i + 1].wert
 			if (i + 4 < len(token_liste) and
 				token_liste[i + 4].typ == "OPERATOR"):
@@ -102,21 +110,24 @@ def parser(token_liste):
 				operator = token_liste[i + 4].wert
 				zahl2    = token_liste[i + 5].wert
 				knoten.append(MathOperation(var_name, token.wert, zahl1, operator, zahl2))
+				definierte_vars.add(var_name)
 				i += 6
 			else:
 				var_wert = token_liste[i + 3].wert
 				knoten.append(VarZuweisung(token.wert, var_name, var_wert))
+				definierte_vars.add(var_name)
 				i += 4
 		elif token.typ == "KEYWORD" and token.wert == "zeige":
 			zeige_typ  = token_liste[i + 1].wert
 			zeige_wert = token_liste[i + 2].wert
+			if zeige_typ == "var" and zeige_wert not in definierte_vars:
+				fehler(f"Variable '{zeige_wert}' ist nicht definiert!")
 			knoten.append(Ausgabe(zeige_typ, zeige_wert))
 			i += 3
 		elif token.typ == "KEYWORD" and token.wert == "wenn":
 			wert1 = token_liste[i + 1].wert
 			wert2 = token_liste[i + 4].wert
 			i += 6
-			# ── dann Block sammeln ────────────────
 			dann_tokens = []
 			while i < len(token_liste):
 				t = token_liste[i]
@@ -129,8 +140,7 @@ def parser(token_liste):
 					break
 				dann_tokens.append(t)
 				i += 1
-			dann_block = list(parser(dann_tokens))
-			# ── elif/else sammeln ─────────────────
+			dann_block = list(parser(dann_tokens, definierte_vars))
 			elif_zweige = []
 			sonst = []
 			while i < len(token_liste):
@@ -155,7 +165,7 @@ def parser(token_liste):
 							break
 						elif_tokens.append(t2)
 						i += 1
-					elif_block = list(parser(elif_tokens))
+					elif_block = list(parser(elif_tokens, definierte_vars))
 					elif_zweige.append((elif_wert1, elif_wert2, elif_block))
 				elif (t.wert == "wenn" and
 					i + 1 < len(token_liste) and
@@ -171,7 +181,7 @@ def parser(token_liste):
 							break
 						sonst_tokens.append(t2)
 						i += 1
-					sonst = list(parser(sonst_tokens))
+					sonst = list(parser(sonst_tokens, definierte_vars))
 					break
 				else:
 					break
@@ -180,6 +190,7 @@ def parser(token_liste):
 			var_name = token_liste[i + 1].wert
 			start    = token_liste[i + 3].wert
 			end      = token_liste[i + 5].wert
+			definierte_vars.add(var_name)
 			i += 6
 			schleifen_tokens = []
 			while i < len(token_liste):
@@ -189,12 +200,11 @@ def parser(token_liste):
 					break
 				schleifen_tokens.append(t)
 				i += 1
-			schleifen_block = list(parser(schleifen_tokens))
+			schleifen_block = list(parser(schleifen_tokens, definierte_vars))
 			knoten.append(ForSchleife(var_name, start, end, schleifen_block))
 		else:
 			i += 1
 	return knoten
-
 # ── Hilfsfunktion ────────────────────────────────
 def mit_anführung(wert):
     try:
