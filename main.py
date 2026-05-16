@@ -73,15 +73,77 @@ def parser(token_liste):
 			wert1 = token_liste[i + 1].wert
 			wert2 = token_liste[i + 4].wert
 			i += 6
+
+			# ── dann Block sammeln ────────────────
 			dann_tokens = []
 			while i < len(token_liste):
-				if token_liste[i].typ == "KEYWORD" and token_liste[i].wert == "ende":
+				t = token_liste[i]
+				if t.typ == "KEYWORD" and t.wert == "ende":
 					i += 1
 					break
-				dann_tokens.append(token_liste[i])
+				if (t.typ == "KEYWORD" and t.wert == "wenn" and
+					i + 1 < len(token_liste) and
+					token_liste[i + 1].wert == "nicht"):
+					break
+				dann_tokens.append(t)
 				i += 1
 			dann_block = list(parser(dann_tokens))
-			knoten.append(Bedingung(wert1,"gleich", wert2, dann_block, [], []))
+
+			# ── elif/else sammeln ─────────────────
+			elif_zweige = []
+			sonst = []
+
+			while i < len(token_liste):
+				t = token_liste[i]
+
+				# "wenn nicht und x gleich wie 5 dann" → elif
+				if (t.wert == "wenn" and
+					i + 1 < len(token_liste) and
+					token_liste[i + 1].wert == "nicht" and
+					i + 2 < len(token_liste) and
+					token_liste[i + 2].wert == "und"):
+					elif_wert1 = token_liste[i + 3].wert
+					elif_wert2 = token_liste[i + 6].wert
+					i += 8
+
+					elif_tokens = []
+					while i < len(token_liste):
+						t2 = token_liste[i]
+						if t2.wert == "ende":
+							i += 1
+							break
+						if (t2.wert == "wenn" and
+							i + 1 < len(token_liste) and
+							token_liste[i + 1].wert == "nicht"):
+							break
+						elif_tokens.append(t2)
+						i += 1
+					elif_block = list(parser(elif_tokens))
+					elif_zweige.append((elif_wert1, elif_wert2, elif_block))
+
+				# "wenn nicht dann" → else
+				elif (t.wert == "wenn" and
+					i + 1 < len(token_liste) and
+					token_liste[i + 1].wert == "nicht" and
+					i + 2 < len(token_liste) and
+					token_liste[i + 2].wert == "dann"):
+					i += 3
+
+					sonst_tokens = []
+					while i < len(token_liste):
+						t2 = token_liste[i]
+						if t2.wert == "ende":
+							i += 1
+							break
+						sonst_tokens.append(t2)
+						i += 1
+					sonst = list(parser(sonst_tokens))
+					break
+
+				else:
+					break
+
+			knoten.append(Bedingung(wert1, "gleich", wert2, dann_block, sonst, elif_zweige))
 		else:
 			i += 1
 	return knoten
@@ -112,6 +174,16 @@ def codegen(ast):
 			for dann_knoten in knoten.dann:
 				zeile = codegen([dann_knoten])
 				ausgabe.append(f'    {zeile}')
+			for elif_wert1, elif_wert2, elif_block in knoten.elif_zweige:
+				ausgabe.append(f'elif {elif_wert1} == "{elif_wert2}":')
+				for elif_knoten in elif_block:
+					zeile = codegen([elif_knoten])
+					ausgabe.append(f'    {zeile}')
+			if knoten.sonst:
+				ausgabe.append('else:')
+				for sonst_knoten in knoten.sonst:
+					zeile = codegen([sonst_knoten])
+					ausgabe.append(f'    {zeile}')
 	return "\n".join(ausgabe)
 # ── Datei einlesen ───────────────────────────────
 with open(sys.argv[1], "r") as f:

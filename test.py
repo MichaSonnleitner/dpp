@@ -1,5 +1,7 @@
+v = "hallo"
 if v == "hallo":
     print("ja")
-    if nicht == "gleich":
-     print("elif")
-    if nicht == "text":
+elif v == "welt":
+    print("elif")
+else:
+    print("nein")
