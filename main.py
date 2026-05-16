@@ -33,6 +33,14 @@ class ForSchleife:
 	start: str
 	end: str
 	schleifen_block: list
+
+@dataclass
+class MathOperation:
+	name: str
+	typ: str
+	zahl1: str
+	operator: str
+	zahl2: str
 # ── Keywords Listen ──────────────────────────────
 keywords = ["text", "zahl", "dz", "zeige", "wenn", "nicht", "und", "dann", "ende", "gleich", "wie", "var", "für", "von", "bis"]
 type_keywords = ["text", "zahl", "dz", "var"]
@@ -45,6 +53,7 @@ def lexer(zeile):
 	nach_gleich_wie = False
 	nach_von = False
 	nach_bis = False
+	nach_operator = False
 	for wort in teile:
 		if wort in keywords:
 			tokens.append(Token("KEYWORD", wort))
@@ -62,11 +71,20 @@ def lexer(zeile):
 		elif wort == "=":
 			tokens.append(Token("ZUWEISUNG", wort))
 			nach_zuweisung = True
-		elif nach_zuweisung or nach_zeige or nach_gleich_wie or nach_von or nach_bis:
+		elif wort in ["+", "-", "*", "/"]:
+			tokens.append(Token("OPERATOR", wort))
+			nach_operator = True
+			nach_zuweisung = False
+			nach_zeige = False
+			nach_gleich_wie = False
+			nach_von = False
+			nach_bis = False
+		elif nach_zuweisung or nach_zeige or nach_gleich_wie or nach_von or nach_bis or nach_operator:
 			tokens.append(Token("WERT", wort))
 			nach_gleich_wie = False
 			nach_von = False
 			nach_bis = False
+			nach_operator = False  
 		else:
 			tokens.append(Token("NAME", wort))
 	return tokens
@@ -78,9 +96,17 @@ def parser(token_liste):
 		token = token_liste[i]
 		if token.typ == "KEYWORD" and token.wert in type_keywords:
 			var_name = token_liste[i + 1].wert
-			var_wert = token_liste[i + 3].wert
-			knoten.append(VarZuweisung(token.wert, var_name, var_wert))
-			i += 4
+			if (i + 4 < len(token_liste) and
+				token_liste[i + 4].typ == "OPERATOR"):
+				zahl1    = token_liste[i + 3].wert
+				operator = token_liste[i + 4].wert
+				zahl2    = token_liste[i + 5].wert
+				knoten.append(MathOperation(var_name, token.wert, zahl1, operator, zahl2))
+				i += 6
+			else:
+				var_wert = token_liste[i + 3].wert
+				knoten.append(VarZuweisung(token.wert, var_name, var_wert))
+				i += 4
 		elif token.typ == "KEYWORD" and token.wert == "zeige":
 			zeige_typ  = token_liste[i + 1].wert
 			zeige_wert = token_liste[i + 2].wert
@@ -90,7 +116,6 @@ def parser(token_liste):
 			wert1 = token_liste[i + 1].wert
 			wert2 = token_liste[i + 4].wert
 			i += 6
-
 			# ── dann Block sammeln ────────────────
 			dann_tokens = []
 			while i < len(token_liste):
@@ -105,15 +130,11 @@ def parser(token_liste):
 				dann_tokens.append(t)
 				i += 1
 			dann_block = list(parser(dann_tokens))
-
 			# ── elif/else sammeln ─────────────────
 			elif_zweige = []
 			sonst = []
-
 			while i < len(token_liste):
 				t = token_liste[i]
-
-				# "wenn nicht und x gleich wie 5 dann" → elif
 				if (t.wert == "wenn" and
 					i + 1 < len(token_liste) and
 					token_liste[i + 1].wert == "nicht" and
@@ -122,7 +143,6 @@ def parser(token_liste):
 					elif_wert1 = token_liste[i + 3].wert
 					elif_wert2 = token_liste[i + 6].wert
 					i += 8
-
 					elif_tokens = []
 					while i < len(token_liste):
 						t2 = token_liste[i]
@@ -137,15 +157,12 @@ def parser(token_liste):
 						i += 1
 					elif_block = list(parser(elif_tokens))
 					elif_zweige.append((elif_wert1, elif_wert2, elif_block))
-
-				# "wenn nicht dann" → else
 				elif (t.wert == "wenn" and
 					i + 1 < len(token_liste) and
 					token_liste[i + 1].wert == "nicht" and
 					i + 2 < len(token_liste) and
 					token_liste[i + 2].wert == "dann"):
 					i += 3
-
 					sonst_tokens = []
 					while i < len(token_liste):
 						t2 = token_liste[i]
@@ -156,18 +173,14 @@ def parser(token_liste):
 						i += 1
 					sonst = list(parser(sonst_tokens))
 					break
-
 				else:
 					break
-
 			knoten.append(Bedingung(wert1, "gleich", wert2, dann_block, sonst, elif_zweige))
 		elif token.typ == "KEYWORD" and token.wert == "für":
-			var_name = token_liste[i + 1].wert  # "x"
-			start    = token_liste[i + 3].wert  # "1"
-			end      = token_liste[i + 5].wert  # "10"
-			i += 6  # springe über die ganze für Zeile
-
-			# Block sammeln bis "ende"
+			var_name = token_liste[i + 1].wert
+			start    = token_liste[i + 3].wert
+			end      = token_liste[i + 5].wert
+			i += 6
 			schleifen_tokens = []
 			while i < len(token_liste):
 				t = token_liste[i]
@@ -232,6 +245,11 @@ def codegen(ast):
 			for schleifen_knoten in knoten.schleifen_block:
 				zeile = codegen([schleifen_knoten])
 				ausgabe.append(f'    {zeile}')
+		elif isinstance(knoten, MathOperation):
+			if knoten.typ in ["zahl", "dz"]:
+				ausgabe.append(f'{knoten.name} = {knoten.zahl1} {knoten.operator} {knoten.zahl2}')
+			else:
+				print(f"Unbekannter MathOperation-Typ: {knoten.typ}")
 	return "\n".join(ausgabe)
 # ── Datei einlesen ───────────────────────────────
 with open(sys.argv[1], "r", encoding="utf-8") as f:
