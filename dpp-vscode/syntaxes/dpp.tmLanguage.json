@@ -1,0 +1,41 @@
+{
+    "name": "D++",
+    "scopeName": "source.dpp",
+    "patterns": [
+        { "include": "#keywords" },
+        { "include": "#strings" },
+        { "include": "#numbers" },
+        { "include": "#comments" }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.dpp",
+                    "match": "\\b(wenn|dann|ende|nicht|und|sonst|für|von|bis|solange)\\b"
+                },
+                {
+                    "name": "keyword.other.dpp",
+                    "match": "\\b(zeige|gleich|wie)\\b"
+                },
+                {
+                    "name": "storage.type.dpp",
+                    "match": "\\b(text|zahl|dz|var)\\b"
+                }
+            ]
+        },
+        "strings": {
+            "name": "string.quoted.double.dpp",
+            "begin": "\"",
+            "end": "\""
+        },
+        "numbers": {
+            "name": "constant.numeric.dpp",
+            "match": "\\b[0-9]+(\\.[0-9]+)?\\b"
+        },
+        "comments": {
+            "name": "comment.line.dpp",
+            "match": "//.*$"
+        }
+    }
+}

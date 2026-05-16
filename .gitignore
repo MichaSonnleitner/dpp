@@ -1,5 +1,4 @@
 test*.py
 test*.dpp
 
-dpp-vscode/
 __pycache__/

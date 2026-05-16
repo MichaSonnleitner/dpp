@@ -1,0 +1,36 @@
+{
+    "name": "dpp-language",
+    "displayName": "D++ Language Support",
+    "description": "Syntax Highlighting für D++",
+    "publisher": "micha",
+    "license": "MIT",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "repository": {
+    "type": "git",
+    "url": "https://github.com/MichaSonnleitner/dpp.git"
+    },
+    "contributes": {
+        "languages": [
+            {
+                "id": "dpp",
+                "aliases": ["D++", "dpp"],
+                "extensions": [".dpp"],
+                "configuration": "./language-configuration.json",
+                "icon": {
+                    "light": "./icons/dpp-icon.png",
+                    "dark": "./icons/dpp-icon.png"
+                }
+            }
+        ],
+        "grammars": [
+            {
+                "language": "dpp",
+                "scopeName": "source.dpp",
+                "path": "./syntaxes/dpp.tmLanguage.json"
+            }
+        ]
+    }
+}
