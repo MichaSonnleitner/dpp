@@ -1,5 +1,8 @@
 import sys
 from dataclasses import dataclass
+
+sys.stdin.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')
 # ── Token Dataclass ──────────────────────────────
 @dataclass
 class Token:
@@ -23,9 +26,15 @@ class Bedingung:
 	dann: list
 	sonst: list
 	elif_zweige: list
+
+@dataclass
+class ForSchleife:
+	var_name: str
+	start: str
+	end: str
+	schleifen_block: list
 # ── Keywords Listen ──────────────────────────────
-keywords = ["text", "zahl", "dz", "zeige",
-	"wenn", "nicht", "und", "dann", "ende", "gleich", "wie", "var"]
+keywords = ["text", "zahl", "dz", "zeige", "wenn", "nicht", "und", "dann", "ende", "gleich", "wie", "var", "für", "von", "bis"]
 type_keywords = ["text", "zahl", "dz", "var"]
 # ── Lexer Funktion ───────────────────────────────
 def lexer(zeile):
@@ -34,6 +43,8 @@ def lexer(zeile):
 	nach_zuweisung = False
 	nach_zeige = False
 	nach_gleich_wie = False
+	nach_von = False
+	nach_bis = False
 	for wort in teile:
 		if wort in keywords:
 			tokens.append(Token("KEYWORD", wort))
@@ -42,14 +53,20 @@ def lexer(zeile):
 				nach_zeige = True
 			elif wort == "wie":
 				nach_gleich_wie = True
+			elif wort == "von":
+				nach_von = True
+			elif wort == "bis":
+				nach_bis = True
 			elif wort not in type_keywords:
 				nach_zeige = False
 		elif wort == "=":
 			tokens.append(Token("ZUWEISUNG", wort))
 			nach_zuweisung = True
-		elif nach_zuweisung or nach_zeige or nach_gleich_wie:
+		elif nach_zuweisung or nach_zeige or nach_gleich_wie or nach_von or nach_bis:
 			tokens.append(Token("WERT", wort))
 			nach_gleich_wie = False
+			nach_von = False
+			nach_bis = False
 		else:
 			tokens.append(Token("NAME", wort))
 	return tokens
@@ -144,6 +161,23 @@ def parser(token_liste):
 					break
 
 			knoten.append(Bedingung(wert1, "gleich", wert2, dann_block, sonst, elif_zweige))
+		elif token.typ == "KEYWORD" and token.wert == "für":
+			var_name = token_liste[i + 1].wert  # "x"
+			start    = token_liste[i + 3].wert  # "1"
+			end      = token_liste[i + 5].wert  # "10"
+			i += 6  # springe über die ganze für Zeile
+
+			# Block sammeln bis "ende"
+			schleifen_tokens = []
+			while i < len(token_liste):
+				t = token_liste[i]
+				if t.typ == "KEYWORD" and t.wert == "ende":
+					i += 1
+					break
+				schleifen_tokens.append(t)
+				i += 1
+			schleifen_block = list(parser(schleifen_tokens))
+			knoten.append(ForSchleife(var_name, start, end, schleifen_block))
 		else:
 			i += 1
 	return knoten
@@ -184,9 +218,14 @@ def codegen(ast):
 				for sonst_knoten in knoten.sonst:
 					zeile = codegen([sonst_knoten])
 					ausgabe.append(f'    {zeile}')
+		elif isinstance(knoten, ForSchleife):
+			ausgabe.append(f'for {knoten.var_name} in range({knoten.start}, {knoten.end} + 1):')
+			for schleifen_knoten in knoten.schleifen_block:
+				zeile = codegen([schleifen_knoten])
+				ausgabe.append(f'    {zeile}')
 	return "\n".join(ausgabe)
 # ── Datei einlesen ───────────────────────────────
-with open(sys.argv[1], "r") as f:
+with open(sys.argv[1], "r", encoding="utf-8") as f:
 	zeilen = f.readlines()
 # ── Alle Zeilen lexen ────────────────────────────
 alle_tokens = []
