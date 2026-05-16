@@ -52,6 +52,17 @@ class Funktion:
 class FunktionAufruf:
     name: str
     argumente: list
+
+@dataclass
+class Rückgabe:
+    wert: str
+
+@dataclass
+class VarFunktionAufruf:
+    typ: str      
+    name: str     
+    funk_name: str 
+    argumente: list
 # ── Keywords Listen ──────────────────────────────
 keywords = ["text", "zahl", "dz", "zeige", "wenn", "nicht", "und", "dann", "ende", "gleich", "wie", "var", "für", "von", "bis", "funktion", "zurück"]
 type_keywords = ["text", "zahl", "dz", "var"]
@@ -104,9 +115,11 @@ def lexer(zeile):
 			tokens.append(Token("NAME", wort))
 	return tokens
 # ── Parser Funktion ──────────────────────────────
-def parser(token_liste, definierte_vars=None):
+def parser(token_liste, definierte_vars=None, definierte_funktionen=None):
 	if definierte_vars is None:
 		definierte_vars = set()
+	if definierte_funktionen is None:
+		definierte_funktionen = set()
 	knoten = []
 	i = 0
 	while i < len(token_liste):
@@ -115,7 +128,17 @@ def parser(token_liste, definierte_vars=None):
 			if i + 3 >= len(token_liste):
 				fehler(f"Fehlender Wert nach '=' bei Variable '{token_liste[i+1].wert}'")
 			var_name = token_liste[i + 1].wert
-			if (i + 4 < len(token_liste) and
+			var_wert = token_liste[i + 3].wert
+			if var_wert in definierte_funktionen:
+				argumente = []
+				j = i + 4
+				while j < len(token_liste) and token_liste[j].typ in ["NAME", "WERT"]:
+					argumente.append(token_liste[j].wert)
+					j += 1
+				knoten.append(VarFunktionAufruf(token.wert, var_name, var_wert, argumente))
+				definierte_vars.add(var_name)
+				i = j
+			elif (i + 4 < len(token_liste) and
 				token_liste[i + 4].typ == "OPERATOR"):
 				zahl1    = token_liste[i + 3].wert
 				operator = token_liste[i + 4].wert
@@ -124,7 +147,6 @@ def parser(token_liste, definierte_vars=None):
 				definierte_vars.add(var_name)
 				i += 6
 			else:
-				var_wert = token_liste[i + 3].wert
 				knoten.append(VarZuweisung(token.wert, var_name, var_wert))
 				definierte_vars.add(var_name)
 				i += 4
@@ -151,7 +173,7 @@ def parser(token_liste, definierte_vars=None):
 					break
 				dann_tokens.append(t)
 				i += 1
-			dann_block = list(parser(dann_tokens, definierte_vars))
+			dann_block = list(parser(dann_tokens, definierte_vars, definierte_funktionen))
 			elif_zweige = []
 			sonst = []
 			while i < len(token_liste):
@@ -176,7 +198,7 @@ def parser(token_liste, definierte_vars=None):
 							break
 						elif_tokens.append(t2)
 						i += 1
-					elif_block = list(parser(elif_tokens, definierte_vars))
+					elif_block = list(parser(elif_tokens, definierte_vars, definierte_funktionen))
 					elif_zweige.append((elif_wert1, elif_wert2, elif_block))
 				elif (t.wert == "wenn" and
 					i + 1 < len(token_liste) and
@@ -192,7 +214,7 @@ def parser(token_liste, definierte_vars=None):
 							break
 						sonst_tokens.append(t2)
 						i += 1
-					sonst = list(parser(sonst_tokens, definierte_vars))
+					sonst = list(parser(sonst_tokens, definierte_vars, definierte_funktionen))
 					break
 				else:
 					break
@@ -211,10 +233,11 @@ def parser(token_liste, definierte_vars=None):
 					break
 				schleifen_tokens.append(t)
 				i += 1
-			schleifen_block = list(parser(schleifen_tokens, definierte_vars))
+			schleifen_block = list(parser(schleifen_tokens, definierte_vars, definierte_funktionen))
 			knoten.append(ForSchleife(var_name, start, end, schleifen_block))
-		elif token.typ == "KEYWORD" and token.wert == "funktion":  # ← NEU
+		elif token.typ == "KEYWORD" and token.wert == "funktion":
 			funk_name = token_liste[i + 1].wert
+			definierte_funktionen.add(funk_name)
 			i += 2
 			parameter = []
 			while i < len(token_liste) and token_liste[i].typ == "NAME":
@@ -227,12 +250,20 @@ def parser(token_liste, definierte_vars=None):
 				if t.wert == "ende":
 					i += 1
 					break
+				if t.wert == "zurück":
+					block_tokens.append(t)
+					block_tokens.append(token_liste[i + 1])
+					i += 2
+					break
 				block_tokens.append(t)
 				i += 1
-			block = list(parser(block_tokens, definierte_vars))
+			block = list(parser(block_tokens, definierte_vars, definierte_funktionen))
 			knoten.append(Funktion(funk_name, parameter, block))
+		elif token.typ == "KEYWORD" and token.wert == "zurück":
+			rück_wert = token_liste[i + 1].wert
+			knoten.append(Rückgabe(rück_wert))
+			i += 2
 		elif token.typ == "NAME":
-			# Funktionsaufruf — NAME gefolgt von Argumenten
 			funk_name = token.wert
 			i += 1
 			argumente = []
@@ -307,6 +338,11 @@ def codegen(ast):
 		elif isinstance(knoten, FunktionAufruf):
 			argumente_str = ", ".join(mit_anführung(a) for a in knoten.argumente)
 			ausgabe.append(f'{knoten.name}({argumente_str})')
+		elif isinstance(knoten, VarFunktionAufruf):
+			argumente_str = ", ".join(mit_anführung(a) for a in knoten.argumente)
+			ausgabe.append(f'{knoten.name} = {knoten.funk_name}({argumente_str})')
+		elif isinstance(knoten, Rückgabe):
+			ausgabe.append(f'return {knoten.wert}')
 	return "\n".join(ausgabe)
 # ── Datei einlesen ───────────────────────────────
 with open(sys.argv[1], "r", encoding="utf-8") as f:
