@@ -181,6 +181,15 @@ def parser(token_liste):
 		else:
 			i += 1
 	return knoten
+
+# ── Hilfsfunktion ────────────────────────────────
+def mit_anführung(wert):
+    try:
+        float(wert)  # ist es eine Zahl?
+        return wert  # ja → kein ""
+    except:
+        return f'"{wert}"'  # nein → mit ""
+	
 # ── Code Generator ───────────────────────────────
 def codegen(ast):
 	ausgabe = []
@@ -204,12 +213,12 @@ def codegen(ast):
 			else:
 				print(f"Unbekannter Ausgabe-Typ: {knoten.typ}")
 		elif isinstance(knoten, Bedingung):
-			ausgabe.append(f'if {knoten.wert1} == "{knoten.wert2}":')
+			ausgabe.append(f'if {knoten.wert1} == {mit_anführung(knoten.wert2)}:')
 			for dann_knoten in knoten.dann:
 				zeile = codegen([dann_knoten])
 				ausgabe.append(f'    {zeile}')
 			for elif_wert1, elif_wert2, elif_block in knoten.elif_zweige:
-				ausgabe.append(f'elif {elif_wert1} == "{elif_wert2}":')
+				ausgabe.append(f'elif {elif_wert1} == {mit_anführung(elif_wert2)}:')
 				for elif_knoten in elif_block:
 					zeile = codegen([elif_knoten])
 					ausgabe.append(f'    {zeile}')
