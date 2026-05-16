@@ -41,8 +41,19 @@ class MathOperation:
 	zahl1: str
 	operator: str
 	zahl2: str
+
+@dataclass
+class Funktion:
+	name: str
+	parameter: list
+	block: list
+
+@dataclass  
+class FunktionAufruf:
+    name: str
+    argumente: list
 # ── Keywords Listen ──────────────────────────────
-keywords = ["text", "zahl", "dz", "zeige", "wenn", "nicht", "und", "dann", "ende", "gleich", "wie", "var", "für", "von", "bis"]
+keywords = ["text", "zahl", "dz", "zeige", "wenn", "nicht", "und", "dann", "ende", "gleich", "wie", "var", "für", "von", "bis", "funktion", "zurück"]
 type_keywords = ["text", "zahl", "dz", "var"]
 # ── Error Handling Funktion ─────────────────────────────
 def fehler(nachricht):
@@ -202,6 +213,33 @@ def parser(token_liste, definierte_vars=None):
 				i += 1
 			schleifen_block = list(parser(schleifen_tokens, definierte_vars))
 			knoten.append(ForSchleife(var_name, start, end, schleifen_block))
+		elif token.typ == "KEYWORD" and token.wert == "funktion":  # ← NEU
+			funk_name = token_liste[i + 1].wert
+			i += 2
+			parameter = []
+			while i < len(token_liste) and token_liste[i].typ == "NAME":
+				definierte_vars.add(token_liste[i].wert)
+				parameter.append(token_liste[i].wert)
+				i += 1
+			block_tokens = []
+			while i < len(token_liste):
+				t = token_liste[i]
+				if t.wert == "ende":
+					i += 1
+					break
+				block_tokens.append(t)
+				i += 1
+			block = list(parser(block_tokens, definierte_vars))
+			knoten.append(Funktion(funk_name, parameter, block))
+		elif token.typ == "NAME":
+			# Funktionsaufruf — NAME gefolgt von Argumenten
+			funk_name = token.wert
+			i += 1
+			argumente = []
+			while i < len(token_liste) and token_liste[i].typ in ["NAME", "WERT"]:
+				argumente.append(token_liste[i].wert)
+				i += 1
+			knoten.append(FunktionAufruf(funk_name, argumente))
 		else:
 			i += 1
 	return knoten
@@ -260,6 +298,15 @@ def codegen(ast):
 				ausgabe.append(f'{knoten.name} = {knoten.zahl1} {knoten.operator} {knoten.zahl2}')
 			else:
 				print(f"Unbekannter MathOperation-Typ: {knoten.typ}")
+		elif isinstance(knoten, Funktion):
+			parameter_str = ", ".join(knoten.parameter)
+			ausgabe.append(f'def {knoten.name}({parameter_str}):')
+			for block_knoten in knoten.block:
+				zeile = codegen([block_knoten])
+				ausgabe.append(f'    {zeile}')
+		elif isinstance(knoten, FunktionAufruf):
+			argumente_str = ", ".join(mit_anführung(a) for a in knoten.argumente)
+			ausgabe.append(f'{knoten.name}({argumente_str})')
 	return "\n".join(ausgabe)
 # ── Datei einlesen ───────────────────────────────
 with open(sys.argv[1], "r", encoding="utf-8") as f:
