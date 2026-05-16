@@ -21,6 +21,7 @@ class Bedingung:
 	wert1: str
 	operator: str
 	wert2: str
+	wert2_typ: str  # NEU
 	dann: list
 	sonst: list
 	elif_zweige: list

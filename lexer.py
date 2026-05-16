@@ -13,7 +13,7 @@ def lexer(zeile):
 	nach_von = False
 	nach_bis = False
 	nach_operator = False
-	nach_als = False  # ← neu
+	nach_als = False
 	for wort in teile:
 		if wort in keywords:
 			tokens.append(Token("KEYWORD", wort))
@@ -27,7 +27,7 @@ def lexer(zeile):
 			elif wort == "bis":
 				nach_bis = True
 			elif wort == "als":
-				nach_als = True  # ← neu
+				nach_als = True
 			elif wort not in type_keywords:
 				nach_zeige = False
 		elif wort == "=":
@@ -47,7 +47,7 @@ def lexer(zeile):
 			nach_von = False
 			nach_bis = False
 			nach_operator = False
-			nach_als = False  # ← neu
+			nach_als = False
 		else:
 			tokens.append(Token("NAME", wort))
 	return tokens

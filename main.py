@@ -1,3 +1,4 @@
+DEBUG = False
 import sys
 from lexer import lexer
 from parser import parser
@@ -17,12 +18,13 @@ for zeile in zeilen:
 
 ast = parser(alle_tokens)
 
-print("=== TOKENS ===")
-for token in alle_tokens:
-	print(token)
-print("\n=== AST ===")
-for knoten in ast:
-	print(knoten)
+if DEBUG:
+    print("=== TOKENS ===")
+    for token in alle_tokens:
+        print(token)
+    print("\n=== AST ===")
+    for knoten in ast:
+        print(knoten)
 
 output = codegen(ast)
 output_datei = sys.argv[1].replace(".dpp", ".py")
