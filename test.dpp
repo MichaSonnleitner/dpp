@@ -1,8 +1,0 @@
-text v = hallo
-wenn v gleich wie hallo dann
-zeige text ja
-wenn nicht und v gleich wie welt dann
-zeige text elif
-wenn nicht dann
-zeige text nein
-ende
