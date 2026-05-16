@@ -25,12 +25,12 @@ def codegen(ast):
 			else:
 				print(f"Unbekannter Ausgabe-Typ: {knoten.typ}")
 		elif isinstance(knoten, Bedingung):
-			ausgabe.append(f'if {knoten.wert1} == {mit_anführung(knoten.wert2)}:')
+			ausgabe.append(f'if {knoten.wert1} {knoten.operator} {mit_anführung(knoten.wert2)}:')
 			for dann_knoten in knoten.dann:
 				zeile = codegen([dann_knoten])
 				ausgabe.append(f'    {zeile}')
-			for elif_wert1, elif_wert2, elif_block in knoten.elif_zweige:
-				ausgabe.append(f'elif {elif_wert1} == {mit_anführung(elif_wert2)}:')
+			for elif_wert1, elif_operator, elif_wert2, elif_block in knoten.elif_zweige:
+				ausgabe.append(f'elif {elif_wert1} {elif_operator} {mit_anführung(elif_wert2)}:')
 				for elif_knoten in elif_block:
 					zeile = codegen([elif_knoten])
 					ausgabe.append(f'    {zeile}')
@@ -63,4 +63,6 @@ def codegen(ast):
 			ausgabe.append(f'{knoten.name} = {knoten.funk_name}({argumente_str})')
 		elif isinstance(knoten, Rückgabe):
 			ausgabe.append(f'return {knoten.wert}')
+		elif isinstance(knoten, Eingabe):
+			ausgabe.append(f'{knoten.wert} = input()')
 	return "\n".join(ausgabe)

@@ -1,7 +1,7 @@
 from nodes import Token
 
 keywords = ["text", "zahl", "dz", "zeige", "wenn", "nicht", "und", "dann",
-	"ende", "gleich", "wie", "var", "für", "von", "bis", "funktion", "zurück", "eingabe"]
+	"ende", "gleich", "wie", "var", "für", "von", "bis", "funktion", "zurück", "eingabe", "größer", "kleiner", "als"]
 type_keywords = ["text", "zahl", "dz", "var"]
 
 def lexer(zeile):
@@ -13,6 +13,7 @@ def lexer(zeile):
 	nach_von = False
 	nach_bis = False
 	nach_operator = False
+	nach_als = False  # ← neu
 	for wort in teile:
 		if wort in keywords:
 			tokens.append(Token("KEYWORD", wort))
@@ -25,6 +26,8 @@ def lexer(zeile):
 				nach_von = True
 			elif wort == "bis":
 				nach_bis = True
+			elif wort == "als":
+				nach_als = True  # ← neu
 			elif wort not in type_keywords:
 				nach_zeige = False
 		elif wort == "=":
@@ -38,12 +41,13 @@ def lexer(zeile):
 			nach_gleich_wie = False
 			nach_von = False
 			nach_bis = False
-		elif nach_zuweisung or nach_zeige or nach_gleich_wie or nach_von or nach_bis or nach_operator:
+		elif nach_zuweisung or nach_zeige or nach_gleich_wie or nach_von or nach_bis or nach_operator or nach_als:
 			tokens.append(Token("WERT", wort))
 			nach_gleich_wie = False
 			nach_von = False
 			nach_bis = False
 			nach_operator = False
+			nach_als = False  # ← neu
 		else:
 			tokens.append(Token("NAME", wort))
 	return tokens

@@ -7,6 +7,15 @@ def fehler(nachricht):
 
 type_keywords = ["text", "zahl", "dz", "var"]
 
+import sys
+from nodes import *
+
+def fehler(nachricht):
+	print(f"D++ Fehler: {nachricht}")
+	sys.exit(1)
+
+type_keywords = ["text", "zahl", "dz", "var"]
+
 def parser(token_liste, definierte_vars=None, definierte_funktionen=None):
 	if definierte_vars is None:
 		definierte_vars = set()
@@ -51,6 +60,15 @@ def parser(token_liste, definierte_vars=None, definierte_funktionen=None):
 			i += 3
 		elif token.typ == "KEYWORD" and token.wert == "wenn":
 			wert1 = token_liste[i + 1].wert
+			operator_wort = token_liste[i + 2].wert
+			if operator_wort == "gleich":
+				operator = "=="
+			elif operator_wort == "größer":
+				operator = ">"
+			elif operator_wort == "kleiner":
+				operator = "<"
+			else:
+				operator = "=="
 			wert2 = token_liste[i + 4].wert
 			i += 6
 			dann_tokens = []
@@ -76,6 +94,15 @@ def parser(token_liste, definierte_vars=None, definierte_funktionen=None):
 					i + 2 < len(token_liste) and
 					token_liste[i + 2].wert == "und"):
 					elif_wert1 = token_liste[i + 3].wert
+					elif_operator_wort = token_liste[i + 4].wert
+					if elif_operator_wort == "gleich":
+						elif_operator = "=="
+					elif elif_operator_wort == "größer":
+						elif_operator = ">"
+					elif elif_operator_wort == "kleiner":
+						elif_operator = "<"
+					else:
+						elif_operator = "=="
 					elif_wert2 = token_liste[i + 6].wert
 					i += 8
 					elif_tokens = []
@@ -91,7 +118,7 @@ def parser(token_liste, definierte_vars=None, definierte_funktionen=None):
 						elif_tokens.append(t2)
 						i += 1
 					elif_block = list(parser(elif_tokens, definierte_vars, definierte_funktionen))
-					elif_zweige.append((elif_wert1, elif_wert2, elif_block))
+					elif_zweige.append((elif_wert1, elif_operator, elif_wert2, elif_block))
 				elif (t.wert == "wenn" and
 					i + 1 < len(token_liste) and
 					token_liste[i + 1].wert == "nicht" and
@@ -110,7 +137,7 @@ def parser(token_liste, definierte_vars=None, definierte_funktionen=None):
 					break
 				else:
 					break
-			knoten.append(Bedingung(wert1, "gleich", wert2, dann_block, sonst, elif_zweige))
+			knoten.append(Bedingung(wert1, operator, wert2, dann_block, sonst, elif_zweige))
 		elif token.typ == "KEYWORD" and token.wert == "für":
 			var_name = token_liste[i + 1].wert
 			start    = token_liste[i + 3].wert
@@ -163,6 +190,11 @@ def parser(token_liste, definierte_vars=None, definierte_funktionen=None):
 				argumente.append(token_liste[i].wert)
 				i += 1
 			knoten.append(FunktionAufruf(funk_name, argumente))
+		elif token.typ == "KEYWORD" and token.wert == "eingabe":
+			var_name = token_liste[i + 1].wert
+			definierte_vars.add(var_name)
+			knoten.append(Eingabe(var_name))
+			i += 2
 		else:
 			i += 1
 	return knoten
