@@ -9,8 +9,8 @@
         "vscode": "^1.60.0"
     },
     "repository": {
-    "type": "git",
-    "url": "https://github.com/MichaSonnleitner/dpp.git"
+        "type": "git",
+        "url": "https://github.com/MichaSonnleitner/dpp.git"
     },
     "contributes": {
         "languages": [
@@ -30,6 +30,12 @@
                 "language": "dpp",
                 "scopeName": "source.dpp",
                 "path": "./syntaxes/dpp.tmLanguage.json"
+            }
+        ],
+        "snippets": [
+            {
+                "language": "dpp",
+                "path": "./snippets/dpp.json"
             }
         ]
     }
